@@ -19,7 +19,6 @@ const activeFilter = (e, filtersList) => {
 }
 
 const filterTodos = (items, filter) => {
-    //console.log(items);
     switch (filter) {
         case "active":
             return items.filter((item) => !item.completed);

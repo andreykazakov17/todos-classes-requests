@@ -86,6 +86,35 @@
 /************************************************************************/
 /******/ ({
 
+/***/ "./src/js/api/requests.js":
+/*!********************************!*\
+  !*** ./src/js/api/requests.js ***!
+  \********************************/
+/*! exports provided: callApi */
+/***/ (function(module, __webpack_exports__, __webpack_require__) {
+
+"use strict";
+__webpack_require__.r(__webpack_exports__);
+/* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "callApi", function() { return callApi; });
+const callApi = async (url, params) => {
+  let response = await fetch(url, {
+    method: params.method,
+    headers: params.headers,
+    body: params.body
+  });
+
+  if (response.ok) {
+    let json = await response.json();
+    return json;
+  } else {
+    throw new Error(`${response.status}: ${response.statusText}`);
+  }
+};
+
+
+
+/***/ }),
+
 /***/ "./src/js/index.js":
 /*!*************************!*\
   !*** ./src/js/index.js ***!
@@ -126,29 +155,32 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return Filters; });
 /* harmony import */ var _services_utils__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../services/utils */ "./src/js/services/utils.js");
 /* harmony import */ var _services_eventEmitter__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../services/eventEmitter */ "./src/js/services/eventEmitter.js");
+function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
+
 
 
 class Filters extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_1__["default"] {
-  constructor(completeAllBtn, filterPanel) {
+  constructor(_completeAllBtn, _filterPanel) {
     super();
-    this.completeAllBtn = completeAllBtn;
-    this.filterPanel = filterPanel;
-  }
 
-  render(todosArr) {
-    const {
-      completeAllBtn,
-      filterPanel
-    } = this;
-    filterPanel.childNodes[1].innerText = `Total: ${Object(_services_utils__WEBPACK_IMPORTED_MODULE_0__["countTodos"])(todosArr)}`;
+    _defineProperty(this, "render", async todosArr => {
+      const {
+        completeAllBtn,
+        filterPanel
+      } = this;
+      filterPanel.childNodes[1].innerText = `Total: ${await Object(_services_utils__WEBPACK_IMPORTED_MODULE_0__["countTodos"])(todosArr)}`;
 
-    if (todosArr.length) {
-      completeAllBtn.style.display = '';
-      filterPanel.style.visibility = 'visible';
-    } else {
-      completeAllBtn.style.display = 'none';
-      filterPanel.style.visibility = 'hidden';
-    }
+      if (todosArr.length) {
+        completeAllBtn.style.display = '';
+        filterPanel.style.visibility = 'visible';
+      } else {
+        completeAllBtn.style.display = 'none';
+        filterPanel.style.visibility = 'hidden';
+      }
+    });
+
+    this.completeAllBtn = _completeAllBtn;
+    this.filterPanel = _filterPanel;
   }
 
 }
@@ -168,17 +200,18 @@ __webpack_require__.r(__webpack_exports__);
 /* harmony import */ var _filters__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ./filters */ "./src/js/modules/filters.js");
 /* harmony import */ var _todoList__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ./todoList */ "./src/js/modules/todoList.js");
 /* harmony import */ var _todoListView__WEBPACK_IMPORTED_MODULE_2__ = __webpack_require__(/*! ./todoListView */ "./src/js/modules/todoListView.js");
-/* harmony import */ var _services_utils__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../services/utils */ "./src/js/services/utils.js");
-/* harmony import */ var _services_eventEmitter__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../services/eventEmitter */ "./src/js/services/eventEmitter.js");
+/* harmony import */ var _api_requests__WEBPACK_IMPORTED_MODULE_3__ = __webpack_require__(/*! ../api/requests */ "./src/js/api/requests.js");
+/* harmony import */ var _services_utils__WEBPACK_IMPORTED_MODULE_4__ = __webpack_require__(/*! ../services/utils */ "./src/js/services/utils.js");
+/* harmony import */ var _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__ = __webpack_require__(/*! ../services/eventEmitter */ "./src/js/services/eventEmitter.js");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 
 
- //import LocalStorage from '../services/localStorage';
 
 
 
-class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_4__["default"] {
+
+class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__["default"] {
   constructor() {
     let {
       todoInput: _todoInput = null,
@@ -193,81 +226,97 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_4__["de
     } = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
     super();
 
-    _defineProperty(this, "handleAddTodo", e => {
+    _defineProperty(this, "handleAddTodo", async e => {
       e.preventDefault();
       const {
         todoInput
       } = this;
       if (todoInput.value === '') return;
-      this.todoList.trigger("addTodo", {
-        text: todoInput.value //id: new Date().getTime(),
-
+      let newTodo = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])('http://localhost:5001/todos', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8'
+        },
+        body: JSON.stringify(todoInput.value)
       });
+      this.todoList.trigger("addTodo", newTodo);
       todoInput.value = '';
     });
 
-    _defineProperty(this, "handleDeleteTodo", e => {
-      const id = Object(_services_utils__WEBPACK_IMPORTED_MODULE_3__["findTodoId"])(e);
+    _defineProperty(this, "handleDeleteTodo", async e => {
+      const id = Object(_services_utils__WEBPACK_IMPORTED_MODULE_4__["findTodoId"])(e);
 
       if (e.target.dataset.trash !== 'trash' && e.target.dataset.clear !== 'clear-all') {
         return;
       }
 
-      this.todoList.trigger('deleteTodo', id);
+      let deletedTodoId = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])(`http://localhost:5001/todos/${id}`, {
+        method: 'DELETE'
+      });
+      this.todoList.trigger('deleteTodo', deletedTodoId);
     });
 
     _defineProperty(this, "handleCheckTodo", async e => {
-      const id = Object(_services_utils__WEBPACK_IMPORTED_MODULE_3__["findTodoId"])(e);
+      const id = Object(_services_utils__WEBPACK_IMPORTED_MODULE_4__["findTodoId"])(e);
 
       if (!(e.target.dataset.complete === 'complete')) {
         return;
       }
 
-      this.todoList.trigger('checkTodo', id);
+      this.idsArr = [...this.idsArr, id];
+      let updatedArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])(`http://localhost:5001/todos/${id}`, {
+        method: 'PATCH'
+      });
+      this.todoList.todosArr = [...updatedArr];
       this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     });
 
     _defineProperty(this, "handleFiltersTodo", e => {
-      this.todoList.currentFilter = Object(_services_utils__WEBPACK_IMPORTED_MODULE_3__["activeFilter"])(e, this.filtersBtns);
+      this.todoList.currentFilter = Object(_services_utils__WEBPACK_IMPORTED_MODULE_4__["activeFilter"])(e, this.filtersBtns);
       this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     });
 
     _defineProperty(this, "handleCompleteAll", async e => {
       e.preventDefault();
-      this.todoList.trigger('toggleTodos');
-      this.todoList.todosArr = await this.todoList.getDataReq();
+      this.todoList.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])('http://localhost:5001/todos', {
+        method: 'PATCH'
+      });
       this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     });
 
-    _defineProperty(this, "handleClear", localStorage => {
-      this.todoList.trigger('clearCompleted');
-      this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
-      this.completeAllBtn.classList.remove('active-btn'); //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
+    _defineProperty(this, "handleClear", async () => {
+      this.todoList.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])('http://localhost:5001/todos/clearAll', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json;charset=utf-8'
+        },
+        body: this.idsArr
+      });
+      this.todoList.trigger('clearCompleted', this.todoList.todosArr);
+      this.clearCompletedBtn.classList.remove('active-btn');
+      this.idsArr = [];
     });
 
-    _defineProperty(this, "handleUpdateText", (e, localStorage) => {
-      this.todoList.trigger('updateInput', e, localStorage);
+    _defineProperty(this, "handleUpdateText", async e => {
+      this.todoList.trigger('updateInput', e);
     });
 
     _defineProperty(this, "init", async () => {
-      this.todoList.todosArr = await this.todoList.getDataReq(); //const localStorage = new LocalStorage();
-      //this.todoList.todosArr = localStorage.getLocalStorage('todosArr') || [];
-
+      this.todoList.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])('http://localhost:5001/todos', {
+        method: 'GET'
+      });
       this.todoList.trigger('render', this.todoList.todosArr, this.currentFilter);
       this.filters.trigger('filtersRender', this.todoList.todosArr);
       this.todoButton.addEventListener("click", this.handleAddTodo);
-      this.todoButton.addEventListener("click", () => {//localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
+      this.todoListSelector.addEventListener('click', e => {
+        this.handleDeleteTodo(e);
       });
       this.todoListSelector.addEventListener('click', e => {
-        this.handleDeleteTodo(e); //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
-      });
-      this.todoListSelector.addEventListener('click', e => {
-        this.handleCheckTodo(e); //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
+        this.handleCheckTodo(e);
       });
       this.filterPanel.addEventListener('click', this.handleFiltersTodo);
       this.completeAllBtn.addEventListener('click', this.handleCompleteAll);
       this.clearCompletedBtn.addEventListener('click', () => {
-        //this.handleClear(localStorage);
         this.handleClear();
       });
       this.todoListSelector.addEventListener('dblclick', e => {
@@ -285,18 +334,14 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_4__["de
     this.todoButton = document.querySelector(todoButton);
     this.completeAllBtn = document.querySelector(completeAllBtn);
     this.clearCompletedBtn = document.querySelector(clearCompletedBtn);
+    this.idsArr = [];
     this.filters = new _filters__WEBPACK_IMPORTED_MODULE_0__["default"](this.completeAllBtn, this.filterPanel);
     this.filters.on('filtersRender', todosArr => {
       this.filters.render(todosArr);
     });
     this.todoList = new _todoList__WEBPACK_IMPORTED_MODULE_1__["default"](this.todosArr, this.filters, this.currentFilter);
-    this.todoList.on("addTodo", _ref => {
-      let {
-        text
-      } = _ref;
-      this.todoList.addTodo({
-        text
-      });
+    this.todoList.on("addTodo", newTodo => {
+      this.todoList.addTodo(newTodo);
     });
     this.todoList.on("render", (todosArr, currentFilter) => {
       //this.todoList.getData();
@@ -306,15 +351,16 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_4__["de
     this.todoList.on("deleteTodo", id => {
       this.todoList.deleteTodo(id);
     });
-    this.todoList.on('checkTodo', async id => {
-      this.todoList.todosArr = await this.todoList.checkTodo(id);
-      this.todoListView.render(this.todoList.todosArr, this.todoList.currentFilter);
+    this.todoList.on('checkTodo', async arr => {
+      //this.todoList.todosArr = await this.todoList.checkTodo(id);
+      //this.todoList.checkTodo(arr);
+      this.todoListView.render(arr, this.todoList.currentFilter);
     });
     this.todoList.on('toggleTodos', () => {
       this.todoList.toggleAllTodos();
     });
-    this.todoList.on('clearCompleted', () => {
-      this.todoList.clearCompleted();
+    this.todoList.on('clearCompleted', todosArr => {
+      this.todoList.clearCompleted(todosArr);
     });
     this.todoList.on('updateInput', (e, localStorage) => {
       this.todoList.updateInput(e, localStorage);
@@ -413,149 +459,52 @@ class TodoItem extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["defa
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return TodoList; });
 /* harmony import */ var _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../services/eventEmitter */ "./src/js/services/eventEmitter.js");
+/* harmony import */ var _api_requests__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../api/requests */ "./src/js/api/requests.js");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 
+
 class TodoList extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["default"] {
-  constructor(todosArr, filters, currentFilter) {
+  constructor(_todosArr, filters, currentFilter) {
     super();
 
-    _defineProperty(this, "getDataReq", async () => {
-      const url = "http://localhost:5001/todos";
-      let response = await fetch(url);
-
-      if (response.ok) {
-        let json = await response.json(); //console.log(json);
-
-        return json;
-      } else {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-    });
-
-    _defineProperty(this, "postData", text => {
-      const url = `http://localhost:5001/todos`;
-      fetch(url, {
-        mode: 'no-cors',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=utf-8'
-        },
-        body: JSON.stringify({
-          text
-        })
-      });
-    });
-
-    _defineProperty(this, "postDataInput", (text, id) => {
-      const url = `http://localhost:5001/todos/${id}`;
-      fetch(url, {
-        mode: 'no-cors',
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json;charset=utf-8'
-        },
-        body: JSON.stringify({
-          text,
-          id
-        })
-      });
-    });
-
-    _defineProperty(this, "deleteOneReq", async id => {
-      const url = `http://localhost:5001/todos/${id}`;
-      await fetch(url, {
-        method: 'DELETE'
-      });
-    });
-
-    _defineProperty(this, "deleteManyReq", async () => {
-      const url = 'http://localhost:5001/todos';
-      await fetch(url, {
-        method: 'DELETE'
-      });
-    });
-
-    _defineProperty(this, "patchOneReq", async id => {
-      const url = `http://localhost:5001/todos/${id}`;
-      let response = await fetch(url, {
-        method: 'PATCH'
-      });
-
-      if (response.ok) {
-        let json = await response.json();
-        return json;
-      } else {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-    });
-
-    _defineProperty(this, "patchManyReq", async () => {
-      const url = 'http://localhost:5001/todos';
-      let response = await fetch(url, {
-        method: 'PATCH'
-      });
-
-      if (response.ok) {
-        let json = await response.json(); //console.log(json);
-
-        return json;
-      } else {
-        throw new Error(`${response.status}: ${response.statusText}`);
-      }
-    });
-
-    _defineProperty(this, "addTodo", async _ref => {
-      let {
-        text,
-        id
-      } = _ref;
-      this.postData(text);
-      this.todosArr = await this.getDataReq();
+    _defineProperty(this, "addTodo", newTodo => {
+      this.todosArr = [...this.todosArr, newTodo];
       this.trigger("render", this.todosArr, this.currentFilter);
     });
 
-    _defineProperty(this, "deleteTodo", async id => {
-      await this.deleteOneReq(id);
-      this.todosArr = await this.getDataReq();
+    _defineProperty(this, "deleteTodo", async deletedTodoId => {
+      this.todosArr = this.todosArr.filter(todo => todo.id !== parseInt(deletedTodoId));
       this.trigger('render', this.todosArr, this.currentFilter);
     });
 
-    _defineProperty(this, "checkTodo", async id => {
-      return this.todosArr = await this.patchOneReq(id);
-    });
-
-    _defineProperty(this, "toggleAllTodos", async () => {
-      this.todosArr = await this.patchManyReq();
-    });
-
-    _defineProperty(this, "clearCompleted", async () => {
-      //this.todosArr = this.todosArr.filter((item) => !item.completed);
-      this.todosArr = await this.deleteManyReq();
-      this.todosArr = await this.getDataReq();
+    _defineProperty(this, "clearCompleted", async todosArr => {
+      this.todosArr = [...todosArr];
       this.trigger('render', this.todosArr, this.currentFilter);
     });
 
-    _defineProperty(this, "updateInput", async (e, localStorage) => {
+    _defineProperty(this, "updateInput", async e => {
       const target = e.target;
       if (target.tagName !== 'LI' && target.tagName !== 'DIV') return;
       const textWrapper = target.parentElement;
       const textDiv = textWrapper.firstChild;
       const textInput = textWrapper.lastChild;
       const valueLength = textInput.value.length;
-      const id = +textWrapper.parentElement.dataset['id']; //console.log(id);
-
+      const id = +textWrapper.parentElement.dataset['id'];
       textDiv.classList.add('hidden');
       textInput.classList.remove('hidden');
       textInput.focus();
       textInput.setSelectionRange(valueLength, valueLength);
 
       textInput.onchange = async () => {
-        if (textInput.value === '') return; //this.todosArr = this.todosArr.map((item) => item.id === id ? { ...item, text: textInput.value } : item);
-
-        this.postDataInput(textInput.value, id);
-        this.todosArr = await this.getDataReq(); //localStorage.setLocalStorage('todosArr', this.todosArr);
-
+        if (textInput.value === '') return;
+        this.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_1__["callApi"])(`http://localhost:5001/todos/${id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+          },
+          body: JSON.stringify(textInput.value, id)
+        });
         this.trigger('render', this.todosArr, this.currentFilter);
       };
 
@@ -564,7 +513,7 @@ class TodoList extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["defa
       };
     });
 
-    this.todosArr = todosArr;
+    this.todosArr = _todosArr;
     this.filters = filters;
     this.currentFilter = currentFilter;
   }
@@ -737,7 +686,6 @@ const activeFilter = (e, filtersList) => {
 };
 
 const filterTodos = (items, filter) => {
-  //console.log(items);
   switch (filter) {
     case "active":
       return items.filter(item => !item.completed);

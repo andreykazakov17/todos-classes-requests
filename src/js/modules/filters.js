@@ -8,10 +8,10 @@ export default class Filters extends MyEventEmitter {
         this.filterPanel = filterPanel;
     }
 
-    render(todosArr) {
+    render = async (todosArr) => {
 
         const { completeAllBtn, filterPanel } = this;
-        filterPanel.childNodes[1].innerText = `Total: ${countTodos(todosArr)}`;
+        filterPanel.childNodes[1].innerText = `Total: ${await countTodos(todosArr)}`;
 
         if (todosArr.length) {
             completeAllBtn.style.display = '';

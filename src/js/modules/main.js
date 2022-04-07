@@ -1,7 +1,7 @@
 import Filters from './filters';
 import TodoList from './todoList';
 import TodoListView from './todoListView';
-//import LocalStorage from '../services/localStorage';
+import { callApi } from '../api/requests';
 import { activeFilter, findTodoId } from '../services/utils';
 import MyEventEmitter from '../services/eventEmitter';
 
@@ -28,6 +28,7 @@ export default class Controller extends MyEventEmitter {
         this.todoButton = document.querySelector(todoButton);
         this.completeAllBtn = document.querySelector(completeAllBtn);
         this.clearCompletedBtn = document.querySelector(clearCompletedBtn);
+        this.idsArr = [];
 
 
         this.filters = new Filters(this.completeAllBtn, this.filterPanel);
@@ -36,8 +37,8 @@ export default class Controller extends MyEventEmitter {
         });
 
         this.todoList = new TodoList(this.todosArr, this.filters, this.currentFilter);
-        this.todoList.on("addTodo", ({ text }) => {
-            this.todoList.addTodo({ text });
+        this.todoList.on("addTodo", (newTodo) => {
+            this.todoList.addTodo(newTodo);
         });
         this.todoList.on("render", (todosArr, currentFilter) => {
             //this.todoList.getData();
@@ -47,42 +48,49 @@ export default class Controller extends MyEventEmitter {
         this.todoList.on("deleteTodo", (id) => {
             this.todoList.deleteTodo(id);
         });
-        this.todoList.on('checkTodo', async (id) => {
-            this.todoList.todosArr = await this.todoList.checkTodo(id);
-            this.todoListView.render(this.todoList.todosArr, this.todoList.currentFilter);
+        this.todoList.on('checkTodo', async (arr) => {
+            //this.todoList.todosArr = await this.todoList.checkTodo(id);
+            //this.todoList.checkTodo(arr);
+            this.todoListView.render(arr, this.todoList.currentFilter);
         });
         this.todoList.on('toggleTodos', () => {
             this.todoList.toggleAllTodos();
         });
-        this.todoList.on('clearCompleted', () => {
-            this.todoList.clearCompleted();
+        this.todoList.on('clearCompleted', (todosArr) => {
+            this.todoList.clearCompleted(todosArr);
         });
         this.todoList.on('updateInput', (e, localStorage) => {
             this.todoList.updateInput(e, localStorage);
         });
     }
 
-    handleAddTodo = (e) => {
+    handleAddTodo = async (e) => {
         e.preventDefault();
 
         const { todoInput } = this;
 
         if (todoInput.value === '') return;
 
-        this.todoList.trigger("addTodo", {
-            text: todoInput.value,
-            //id: new Date().getTime(),
+        let newTodo = await callApi('http://localhost:5001/todos', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: JSON.stringify(todoInput.value)
         });
+        this.todoList.trigger("addTodo", newTodo);
         todoInput.value = '';
     }
 
-    handleDeleteTodo = (e) => {
+    handleDeleteTodo = async (e) => {
         const id = findTodoId(e);
         
         if (e.target.dataset.trash !== 'trash' &&  e.target.dataset.clear !== 'clear-all') {
             return;
         }
-        this.todoList.trigger('deleteTodo', id);
+    
+        let deletedTodoId = await callApi(`http://localhost:5001/todos/${id}`, { method: 'DELETE' });
+        this.todoList.trigger('deleteTodo', deletedTodoId);
     }
 
     handleCheckTodo = async (e) => {
@@ -91,8 +99,11 @@ export default class Controller extends MyEventEmitter {
         if (!(e.target.dataset.complete === 'complete')) {
             return;
         }
-        
-        this.todoList.trigger('checkTodo', id);
+
+        this.idsArr = [...this.idsArr, id];
+        let updatedArr = await callApi(`http://localhost:5001/todos/${id}`, { method: 'PATCH' });
+
+        this.todoList.todosArr = [...updatedArr];
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
@@ -103,48 +114,48 @@ export default class Controller extends MyEventEmitter {
 
     handleCompleteAll = async (e) => {
         e.preventDefault();
-        this.todoList.trigger('toggleTodos');
-        this.todoList.todosArr = await this.todoList.getDataReq()
+    
+
+        this.todoList.todosArr = await callApi('http://localhost:5001/todos', { method: 'PATCH' });
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
-    handleClear = (localStorage) => {
-        this.todoList.trigger('clearCompleted');
-        this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
-        this.completeAllBtn.classList.remove('active-btn');
-        //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
+    handleClear = async () => {
+        this.todoList.todosArr = await callApi('http://localhost:5001/todos/clearAll', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json;charset=utf-8'
+            },
+            body: this.idsArr
+        });
+
+        this.todoList.trigger('clearCompleted', this.todoList.todosArr);
+        this.clearCompletedBtn.classList.remove('active-btn');
+        this.idsArr = [];
     }
 
-    handleUpdateText = (e, localStorage) => {
-        this.todoList.trigger('updateInput', e, localStorage);
+    handleUpdateText = async (e) => {
+
+        this.todoList.trigger('updateInput', e);
     }
 
     init = async () => {
 
-        this.todoList.todosArr = await this.todoList.getDataReq();
+        this.todoList.todosArr = await callApi('http://localhost:5001/todos', {  method: 'GET'});
 
-        //const localStorage = new LocalStorage();
-        //this.todoList.todosArr = localStorage.getLocalStorage('todosArr') || [];
         this.todoList.trigger('render', this.todoList.todosArr, this.currentFilter);
-
         this.filters.trigger('filtersRender', this.todoList.todosArr);
 
         this.todoButton.addEventListener("click", this.handleAddTodo);
-        this.todoButton.addEventListener("click", () => {
-            //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
-        })
         this.todoListSelector.addEventListener('click', (e) => {
             this.handleDeleteTodo(e);
-            //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
         });
         this.todoListSelector.addEventListener('click', (e) => {
             this.handleCheckTodo(e);
-            //localStorage.setLocalStorage('todosArr', this.todoList.todosArr);
         });
         this.filterPanel.addEventListener('click', this.handleFiltersTodo);
         this.completeAllBtn.addEventListener('click', this.handleCompleteAll);
         this.clearCompletedBtn.addEventListener('click', () => {
-            //this.handleClear(localStorage);
             this.handleClear();
         });
         this.todoListSelector.addEventListener('dblclick', (e) => {
