@@ -56,9 +56,6 @@ export default class Controller extends MyEventEmitter {
         this.todoList.on('toggleTodos', () => {
             this.todoList.toggleAllTodos();
         });
-        this.todoList.on('clearCompleted', (todosArr) => {
-            this.todoList.clearCompleted(todosArr);
-        });
         this.todoList.on('updateInput', (e, localStorage) => {
             this.todoList.updateInput(e, localStorage);
         });
@@ -71,6 +68,13 @@ export default class Controller extends MyEventEmitter {
 
         if (todoInput.value === '') return;
 
+        // let newTodo = await callApi('http://localhost:5001/todos', {
+        //     method: 'POST',
+        //     headers: {
+        //       'Content-Type': 'application/json;charset=utf-8'
+        //     },
+        //     body: JSON.stringify(todoInput.value)
+        // });
         let newTodo = await callApi('http://localhost:5001/todos', {
             method: 'POST',
             headers: {
@@ -101,9 +105,9 @@ export default class Controller extends MyEventEmitter {
         }
 
         this.idsArr = [...this.idsArr, id];
-        let updatedArr = await callApi(`http://localhost:5001/todos/${id}`, { method: 'PATCH' });
-
-        this.todoList.todosArr = [...updatedArr];
+        let checkedTodo = await callApi(`http://localhost:5001/todos/${id}`, { method: 'PATCH' });
+        
+        this.todoList.todosArr = this.todoList.todosArr.map((todo) => todo.id === parseInt(checkedTodo.id) ? checkedTodo : todo);
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
@@ -129,19 +133,50 @@ export default class Controller extends MyEventEmitter {
             body: this.idsArr
         });
 
-        this.todoList.trigger('clearCompleted', this.todoList.todosArr);
+        this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
         this.clearCompletedBtn.classList.remove('active-btn');
         this.idsArr = [];
     }
 
     handleUpdateText = async (e) => {
+        const target = e.target;
+    
+        if (target.tagName !== 'LI' && target.tagName !== 'DIV') return;
+    
+        const textWrapper = target.parentElement;
+        const textDiv = textWrapper.firstChild;
+        const textInput = textWrapper.lastChild;
+        const valueLength = textInput.value.length;
+        const id = +textWrapper.parentElement.dataset['id'];
+    
+        textDiv.classList.add('hidden');
+        textInput.classList.remove('hidden');
+        textInput.focus();
+        textInput.setSelectionRange(valueLength, valueLength);
 
-        this.todoList.trigger('updateInput', e);
+        
+        textInput.onchange = async () => {
+    
+            if (textInput.value === '') return;
+
+            this.todoList.todosArr = await callApi(`http://localhost:5001/todos/${id}`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json;charset=utf-8'
+                },
+                body: JSON.stringify(textInput.value, id)
+            });
+            this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
+        }
+    
+        textInput.onblur = () => {
+            this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
+        }
     }
 
     init = async () => {
 
-        this.todoList.todosArr = await callApi('http://localhost:5001/todos', {  method: 'GET'});
+        this.todoList.todosArr = await callApi('http://localhost:5001/todos', { method: 'GET' });
 
         this.todoList.trigger('render', this.todoList.todosArr, this.currentFilter);
         this.filters.trigger('filtersRender', this.todoList.todosArr);

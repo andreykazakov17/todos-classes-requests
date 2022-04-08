@@ -1,10 +1,17 @@
 const callApi = async (url, params) => {
+    
+    const { method, headers, body } = params;
+    let response;
 
-    let response = await fetch(url, {
-        method: params.method,
-        headers: params.headers,
-        body: params.body
-    });
+    if (!headers && !body) {
+        response = await fetch(url, { method: method });
+    } else {
+        response = await fetch(url, { 
+            method: method,
+            headers: headers,
+            body: body
+        });
+    }
 
     if(response.ok) {
         let json = await response.json();

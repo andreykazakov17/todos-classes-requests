@@ -97,11 +97,24 @@
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "callApi", function() { return callApi; });
 const callApi = async (url, params) => {
-  let response = await fetch(url, {
-    method: params.method,
-    headers: params.headers,
-    body: params.body
-  });
+  const {
+    method,
+    headers,
+    body
+  } = params;
+  let response;
+
+  if (!headers && !body) {
+    response = await fetch(url, {
+      method: method
+    });
+  } else {
+    response = await fetch(url, {
+      method: method,
+      headers: headers,
+      body: body
+    });
+  }
 
   if (response.ok) {
     let json = await response.json();
@@ -231,7 +244,14 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__["de
       const {
         todoInput
       } = this;
-      if (todoInput.value === '') return;
+      if (todoInput.value === '') return; // let newTodo = await callApi('http://localhost:5001/todos', {
+      //     method: 'POST',
+      //     headers: {
+      //       'Content-Type': 'application/json;charset=utf-8'
+      //     },
+      //     body: JSON.stringify(todoInput.value)
+      // });
+
       let newTodo = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])('http://localhost:5001/todos', {
         method: 'POST',
         headers: {
@@ -264,10 +284,10 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__["de
       }
 
       this.idsArr = [...this.idsArr, id];
-      let updatedArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])(`http://localhost:5001/todos/${id}`, {
+      let checkedTodo = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])(`http://localhost:5001/todos/${id}`, {
         method: 'PATCH'
       });
-      this.todoList.todosArr = [...updatedArr];
+      this.todoList.todosArr = this.todoList.todosArr.map(todo => todo.id === parseInt(checkedTodo.id) ? checkedTodo : todo);
       this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     });
 
@@ -292,13 +312,39 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__["de
         },
         body: this.idsArr
       });
-      this.todoList.trigger('clearCompleted', this.todoList.todosArr);
+      this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
       this.clearCompletedBtn.classList.remove('active-btn');
       this.idsArr = [];
     });
 
     _defineProperty(this, "handleUpdateText", async e => {
-      this.todoList.trigger('updateInput', e);
+      const target = e.target;
+      if (target.tagName !== 'LI' && target.tagName !== 'DIV') return;
+      const textWrapper = target.parentElement;
+      const textDiv = textWrapper.firstChild;
+      const textInput = textWrapper.lastChild;
+      const valueLength = textInput.value.length;
+      const id = +textWrapper.parentElement.dataset['id'];
+      textDiv.classList.add('hidden');
+      textInput.classList.remove('hidden');
+      textInput.focus();
+      textInput.setSelectionRange(valueLength, valueLength);
+
+      textInput.onchange = async () => {
+        if (textInput.value === '') return;
+        this.todoList.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_3__["callApi"])(`http://localhost:5001/todos/${id}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json;charset=utf-8'
+          },
+          body: JSON.stringify(textInput.value, id)
+        });
+        this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
+      };
+
+      textInput.onblur = () => {
+        this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
+      };
     });
 
     _defineProperty(this, "init", async () => {
@@ -358,9 +404,6 @@ class Controller extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_5__["de
     });
     this.todoList.on('toggleTodos', () => {
       this.todoList.toggleAllTodos();
-    });
-    this.todoList.on('clearCompleted', todosArr => {
-      this.todoList.clearCompleted(todosArr);
     });
     this.todoList.on('updateInput', (e, localStorage) => {
       this.todoList.updateInput(e, localStorage);
@@ -459,17 +502,16 @@ class TodoItem extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["defa
 __webpack_require__.r(__webpack_exports__);
 /* harmony export (binding) */ __webpack_require__.d(__webpack_exports__, "default", function() { return TodoList; });
 /* harmony import */ var _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__ = __webpack_require__(/*! ../services/eventEmitter */ "./src/js/services/eventEmitter.js");
-/* harmony import */ var _api_requests__WEBPACK_IMPORTED_MODULE_1__ = __webpack_require__(/*! ../api/requests */ "./src/js/api/requests.js");
 function _defineProperty(obj, key, value) { if (key in obj) { Object.defineProperty(obj, key, { value: value, enumerable: true, configurable: true, writable: true }); } else { obj[key] = value; } return obj; }
 
 
-
 class TodoList extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["default"] {
-  constructor(_todosArr, filters, currentFilter) {
+  constructor(todosArr, filters, currentFilter) {
     super();
 
     _defineProperty(this, "addTodo", newTodo => {
       this.todosArr = [...this.todosArr, newTodo];
+      console.log(this.todosArr);
       this.trigger("render", this.todosArr, this.currentFilter);
     });
 
@@ -478,42 +520,7 @@ class TodoList extends _services_eventEmitter__WEBPACK_IMPORTED_MODULE_0__["defa
       this.trigger('render', this.todosArr, this.currentFilter);
     });
 
-    _defineProperty(this, "clearCompleted", async todosArr => {
-      this.todosArr = [...todosArr];
-      this.trigger('render', this.todosArr, this.currentFilter);
-    });
-
-    _defineProperty(this, "updateInput", async e => {
-      const target = e.target;
-      if (target.tagName !== 'LI' && target.tagName !== 'DIV') return;
-      const textWrapper = target.parentElement;
-      const textDiv = textWrapper.firstChild;
-      const textInput = textWrapper.lastChild;
-      const valueLength = textInput.value.length;
-      const id = +textWrapper.parentElement.dataset['id'];
-      textDiv.classList.add('hidden');
-      textInput.classList.remove('hidden');
-      textInput.focus();
-      textInput.setSelectionRange(valueLength, valueLength);
-
-      textInput.onchange = async () => {
-        if (textInput.value === '') return;
-        this.todosArr = await Object(_api_requests__WEBPACK_IMPORTED_MODULE_1__["callApi"])(`http://localhost:5001/todos/${id}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json;charset=utf-8'
-          },
-          body: JSON.stringify(textInput.value, id)
-        });
-        this.trigger('render', this.todosArr, this.currentFilter);
-      };
-
-      textInput.onblur = () => {
-        this.trigger('render', this.todosArr, this.currentFilter);
-      };
-    });
-
-    this.todosArr = _todosArr;
+    this.todosArr = todosArr;
     this.filters = filters;
     this.currentFilter = currentFilter;
   }
