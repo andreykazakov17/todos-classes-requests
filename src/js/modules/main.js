@@ -1,7 +1,7 @@
 import Filters from './filters';
 import TodoList from './todoList';
 import TodoListView from './todoListView';
-import { callApi } from '../api/requests';
+import Requests from '../api/requests';
 import { activeFilter, findTodoId } from '../services/utils';
 import MyEventEmitter from '../services/eventEmitter';
 
@@ -41,23 +41,11 @@ export default class Controller extends MyEventEmitter {
             this.todoList.addTodo(newTodo);
         });
         this.todoList.on("render", (todosArr, currentFilter) => {
-            //this.todoList.getData();
             this.filters.trigger('filtersRender', todosArr);
             this.todoListView.render(todosArr, currentFilter);
         });
         this.todoList.on("deleteTodo", (id) => {
             this.todoList.deleteTodo(id);
-        });
-        this.todoList.on('checkTodo', async (arr) => {
-            //this.todoList.todosArr = await this.todoList.checkTodo(id);
-            //this.todoList.checkTodo(arr);
-            this.todoListView.render(arr, this.todoList.currentFilter);
-        });
-        this.todoList.on('toggleTodos', () => {
-            this.todoList.toggleAllTodos();
-        });
-        this.todoList.on('updateInput', (e, localStorage) => {
-            this.todoList.updateInput(e, localStorage);
         });
     }
 
@@ -68,20 +56,7 @@ export default class Controller extends MyEventEmitter {
 
         if (todoInput.value === '') return;
 
-        // let newTodo = await callApi('http://localhost:5001/todos', {
-        //     method: 'POST',
-        //     headers: {
-        //       'Content-Type': 'application/json;charset=utf-8'
-        //     },
-        //     body: JSON.stringify(todoInput.value)
-        // });
-        let newTodo = await callApi('http://localhost:5001/todos', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8'
-            },
-            body: JSON.stringify(todoInput.value)
-        });
+        let newTodo = await new Requests().addTodo(todoInput.value);
         this.todoList.trigger("addTodo", newTodo);
         todoInput.value = '';
     }
@@ -93,7 +68,7 @@ export default class Controller extends MyEventEmitter {
             return;
         }
     
-        let deletedTodoId = await callApi(`http://localhost:5001/todos/${id}`, { method: 'DELETE' });
+        let deletedTodoId = await new Requests().deleteTodo(id);
         this.todoList.trigger('deleteTodo', deletedTodoId);
     }
 
@@ -105,7 +80,7 @@ export default class Controller extends MyEventEmitter {
         }
 
         this.idsArr = [...this.idsArr, id];
-        let checkedTodo = await callApi(`http://localhost:5001/todos/${id}`, { method: 'PATCH' });
+        let checkedTodo = await new Requests().checkTodo(id);
         
         this.todoList.todosArr = this.todoList.todosArr.map((todo) => todo.id === parseInt(checkedTodo.id) ? checkedTodo : todo);
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
@@ -120,18 +95,12 @@ export default class Controller extends MyEventEmitter {
         e.preventDefault();
     
 
-        this.todoList.todosArr = await callApi('http://localhost:5001/todos', { method: 'PATCH' });
+        this.todoList.todosArr = await new Requests().completeAll();
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
     handleClear = async () => {
-        this.todoList.todosArr = await callApi('http://localhost:5001/todos/clearAll', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json;charset=utf-8'
-            },
-            body: this.idsArr
-        });
+        this.todoList.todosArr = await new Requests().clearCompleted(this.idsArr);
 
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
         this.clearCompletedBtn.classList.remove('active-btn');
@@ -159,13 +128,7 @@ export default class Controller extends MyEventEmitter {
     
             if (textInput.value === '') return;
 
-            this.todoList.todosArr = await callApi(`http://localhost:5001/todos/${id}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json;charset=utf-8'
-                },
-                body: JSON.stringify(textInput.value, id)
-            });
+            this.todoList.todosArr = await new Requests().updateTextInput(textInput.value, id);
             this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
         }
     
@@ -176,7 +139,7 @@ export default class Controller extends MyEventEmitter {
 
     init = async () => {
 
-        this.todoList.todosArr = await callApi('http://localhost:5001/todos', { method: 'GET' });
+        this.todoList.todosArr = await new Requests().getTodos();
 
         this.todoList.trigger('render', this.todoList.todosArr, this.currentFilter);
         this.filters.trigger('filtersRender', this.todoList.todosArr);

@@ -10,7 +10,6 @@ export default class TodoList extends MyEventEmitter {
 
     addTodo = (newTodo) => {
         this.todosArr = [...this.todosArr, newTodo];
-        console.log(this.todosArr);
         this.trigger("render", this.todosArr, this.currentFilter);
     }
 
