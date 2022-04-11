@@ -32,7 +32,8 @@ const filterTodos = (items, filter) => {
 const findTodoId = (e) => {
     const target = e.target;
     const todo = target.parentElement;
-    return +todo.getAttribute('data-id');
+    const id = todo.getAttribute('data-id');
+    return id;
 }
 
 export { createTodo, countTodos, activeFilter, findTodoId, filterTodos };

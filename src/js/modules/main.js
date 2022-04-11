@@ -4,6 +4,9 @@ import TodoListView from './todoListView';
 import Requests from '../api/requests';
 import { activeFilter, findTodoId } from '../services/utils';
 import MyEventEmitter from '../services/eventEmitter';
+// import mongoose from 'mongoose';
+// const Schema = mongoose.Schema;
+// const db = 'mongodb://localhost:27017/todos';
 
 export default class Controller extends MyEventEmitter {
     constructor({ 
@@ -64,6 +67,7 @@ export default class Controller extends MyEventEmitter {
     handleDeleteTodo = async (e) => {
         const id = findTodoId(e);
         
+        
         if (e.target.dataset.trash !== 'trash' &&  e.target.dataset.clear !== 'clear-all') {
             return;
         }
@@ -79,10 +83,12 @@ export default class Controller extends MyEventEmitter {
             return;
         }
 
-        this.idsArr = [...this.idsArr, id];
+        if(!this.idsArr.includes(id)) {
+            this.idsArr = [...this.idsArr, id];
+        }
         let checkedTodo = await new Requests().checkTodo(id);
         
-        this.todoList.todosArr = this.todoList.todosArr.map((todo) => todo.id === parseInt(checkedTodo.id) ? checkedTodo : todo);
+        this.todoList.todosArr = this.todoList.todosArr.map((todo) => todo._id === checkedTodo._id ? checkedTodo : todo);
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
@@ -116,7 +122,7 @@ export default class Controller extends MyEventEmitter {
         const textDiv = textWrapper.firstChild;
         const textInput = textWrapper.lastChild;
         const valueLength = textInput.value.length;
-        const id = +textWrapper.parentElement.dataset['id'];
+        const id = textWrapper.parentElement.dataset['id'];
     
         textDiv.classList.add('hidden');
         textInput.classList.remove('hidden');

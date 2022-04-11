@@ -14,8 +14,7 @@ export default class TodoList extends MyEventEmitter {
     }
 
     deleteTodo = async (deletedTodoId) => {
-
-        this.todosArr = this.todosArr.filter((todo) => todo.id !== parseInt(deletedTodoId));
+        this.todosArr = this.todosArr.filter((todo) => todo._id !== deletedTodoId);
         this.trigger('render', this.todosArr, this.currentFilter);
     }
 }

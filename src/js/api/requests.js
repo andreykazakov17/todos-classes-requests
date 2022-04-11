@@ -34,6 +34,9 @@ export default class Requests {
         const url = `/todos/${id}`;
         const params = { method: 'DELETE' };
 
+        console.log('url', url);
+        console.log('params', params);
+
         return await callApi(url, params);
     }
 
@@ -73,6 +76,8 @@ export default class Requests {
             },
             body: JSON.stringify(text, id)
         }
+
+        console.log(url);
 
         return await callApi(url, params);
     }
