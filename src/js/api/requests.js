@@ -77,7 +77,7 @@ export default class Requests {
             body: JSON.stringify(text, id)
         }
 
-        console.log(url);
+        //console.log(url);
 
         return await callApi(url, params);
     }

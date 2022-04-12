@@ -134,7 +134,15 @@ export default class Controller extends MyEventEmitter {
     
             if (textInput.value === '') return;
 
-            this.todoList.todosArr = await new Requests().updateTextInput(textInput.value, id);
+            let updatedTodo = await new Requests().updateTextInput(textInput.value, id);
+            this.todoList.todosArr = this.todoList.todosArr.map((todo) => {
+                if (todo._id === updatedTodo._id) {
+                    todo.text = updatedTodo.text;
+                    return todo;
+                }
+                return todo;
+            });
+
             this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
         }
     
