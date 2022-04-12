@@ -1,12 +1,9 @@
 import Filters from './filters';
 import TodoList from './todoList';
 import TodoListView from './todoListView';
-import Requests from '../api/requests';
+import { requests } from '../api/requests';
 import { activeFilter, findTodoId } from '../services/utils';
 import MyEventEmitter from '../services/eventEmitter';
-// import mongoose from 'mongoose';
-// const Schema = mongoose.Schema;
-// const db = 'mongodb://localhost:27017/todos';
 
 export default class Controller extends MyEventEmitter {
     constructor({ 
@@ -59,7 +56,7 @@ export default class Controller extends MyEventEmitter {
 
         if (todoInput.value === '') return;
 
-        let newTodo = await new Requests().addTodo(todoInput.value);
+        let newTodo = await requests.addTodo(todoInput.value);
         this.todoList.trigger("addTodo", newTodo);
         todoInput.value = '';
     }
@@ -72,7 +69,7 @@ export default class Controller extends MyEventEmitter {
             return;
         }
     
-        let deletedTodoId = await new Requests().deleteTodo(id);
+        let deletedTodoId = await requests.deleteTodo(id);
         this.todoList.trigger('deleteTodo', deletedTodoId);
     }
 
@@ -86,7 +83,7 @@ export default class Controller extends MyEventEmitter {
         if(!this.idsArr.includes(id)) {
             this.idsArr = [...this.idsArr, id];
         }
-        let checkedTodo = await new Requests().checkTodo(id);
+        let checkedTodo = await requests.checkTodo(id);
         
         this.todoList.todosArr = this.todoList.todosArr.map((todo) => todo._id === checkedTodo._id ? checkedTodo : todo);
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
@@ -101,12 +98,12 @@ export default class Controller extends MyEventEmitter {
         e.preventDefault();
     
 
-        this.todoList.todosArr = await new Requests().completeAll();
+        this.todoList.todosArr = await requests.completeAll();
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
     }
 
     handleClear = async () => {
-        this.todoList.todosArr = await new Requests().clearCompleted(this.idsArr);
+        this.todoList.todosArr = await requests.clearCompleted(this.idsArr);
 
         this.todoList.trigger('render', this.todoList.todosArr, this.todoList.currentFilter);
         this.clearCompletedBtn.classList.remove('active-btn');
@@ -134,7 +131,7 @@ export default class Controller extends MyEventEmitter {
     
             if (textInput.value === '') return;
 
-            let updatedTodo = await new Requests().updateTextInput(textInput.value, id);
+            let updatedTodo = await requests.updateTextInput(textInput.value, id);
             this.todoList.todosArr = this.todoList.todosArr.map((todo) => {
                 if (todo._id === updatedTodo._id) {
                     todo.text = updatedTodo.text;
@@ -153,7 +150,7 @@ export default class Controller extends MyEventEmitter {
 
     init = async () => {
 
-        this.todoList.todosArr = await new Requests().getTodos();
+        this.todoList.todosArr = await requests.getTodos();
 
         this.todoList.trigger('render', this.todoList.todosArr, this.currentFilter);
         this.filters.trigger('filtersRender', this.todoList.todosArr);

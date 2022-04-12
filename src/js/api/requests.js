@@ -9,15 +9,15 @@ const callApi = async (url, params) => {
     }
 }
 
-export default class Requests {
-
-    getTodos = async () => {
+const requests = {
+    
+    async getTodos() {
         const url = '/todos';
         const params = { method: 'GET' };
         return await callApi(url, params);
-    }
+    },
 
-    addTodo = async (text) => {
+    async addTodo(text) {
         const url = '/todos';
         const params = {
             method: 'POST',
@@ -28,9 +28,9 @@ export default class Requests {
         };
 
         return await callApi(url, params);
-    }
+    },
 
-    deleteTodo = async (id) => {
+    async deleteTodo(id) {
         const url = `/todos/${id}`;
         const params = { method: 'DELETE' };
 
@@ -38,23 +38,23 @@ export default class Requests {
         console.log('params', params);
 
         return await callApi(url, params);
-    }
+    },
 
-    checkTodo = async (id) => {
+    async checkTodo(id) {
         const url = `/todos/${id}`;
         const params = { method: 'PATCH' };
 
         return await callApi(url, params);
-    }
+    },
 
-    completeAll = async () => {
+    async completeAll() {
         const url = '/todos';
         const params = { method: 'PATCH' };
 
         return await callApi(url, params);
-    }
+    },
 
-    clearCompleted = async (idsArr) => {
+    async clearCompleted(idsArr) {
         const url = '/todos/clearAll';
         const params = {
             method: 'POST',
@@ -65,9 +65,9 @@ export default class Requests {
         };
 
         return await callApi(url, params);
-    }
+    },
 
-    updateTextInput = async (text, id) => {
+    async updateTextInput(text, id) {
         const url = `/todos/${id}`;
         const params = {
             method: 'POST',
@@ -77,8 +77,8 @@ export default class Requests {
             body: JSON.stringify(text, id)
         }
 
-        //console.log(url);
-
         return await callApi(url, params);
     }
 }
+
+export { requests };
